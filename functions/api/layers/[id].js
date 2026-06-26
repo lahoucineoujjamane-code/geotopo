@@ -1,5 +1,5 @@
 // DELETE /api/layers/:id
-import { json, err, getUser } from '../../_middleware.js';
+import { json, err, getUser } from '../../_shared.js';
 
 export async function onRequestDelete({ request, env, params }) {
   const user = await getUser(request, env);

@@ -1,5 +1,5 @@
 // POST /api/layers  → save layer (with optional R2 upload for large GeoJSON)
-import { json, err, getUser, uuid } from '../../_middleware.js';
+import { json, err, getUser, uuid } from '../../_shared.js';
 
 export async function onRequestPost({ request, env }) {
   const user = await getUser(request, env);
