@@ -1,5 +1,5 @@
 // POST /api/files/upload  → multipart upload to R2
-import { json, err, getUser, uuid } from '../../_middleware.js';
+import { json, err, getUser, uuid } from '../../_shared.js';
 
 const ALLOWED_TYPES = {
   'geojson': 'application/geo+json',
