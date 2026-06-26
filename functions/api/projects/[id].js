@@ -1,7 +1,7 @@
 // GET    /api/projects/:id  → get project + layers
 // PUT    /api/projects/:id  → update project
 // DELETE /api/projects/:id  → delete project + layers + R2 files
-import { json, err, getUser } from '../../_middleware.js';
+import { json, err, getUser } from '../../_shared.js';
 
 async function getProject(id, userId, env) {
   return env.DB.prepare(

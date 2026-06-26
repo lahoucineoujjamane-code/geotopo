@@ -1,6 +1,6 @@
 // GET  /api/projects  → list user projects
 // POST /api/projects  → create project
-import { json, err, getUser, uuid } from '../../_middleware.js';
+import { json, err, getUser, uuid } from '../../_shared.js';
 
 export async function onRequestGet({ request, env }) {
   const user = await getUser(request, env);
