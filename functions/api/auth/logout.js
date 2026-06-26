@@ -1,5 +1,5 @@
 // POST /api/auth/logout
-import { json, sha256hex } from '../../_middleware.js';
+import { json, sha256hex } from '../../_shared.js';
 
 export async function onRequestPost({ request, env }) {
   const auth = request.headers.get('Authorization') || '';

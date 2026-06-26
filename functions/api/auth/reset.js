@@ -1,6 +1,6 @@
 // POST /api/auth/reset  → request reset
 // POST /api/auth/reset/confirm → confirm reset
-import { json, err, hashPassword, randomHex, sha256hex } from '../../_middleware.js';
+import { json, err, hashPassword, randomHex, sha256hex } from '../../_shared.js';
 
 export async function onRequestPost({ request, env }) {
   let body; try { body = await request.json(); } catch { return err('JSON invalide'); }

@@ -1,5 +1,5 @@
 // POST /api/auth/register
-import { json, err, hashPassword, randomHex, uuid, signJWT, sha256hex } from '../../_middleware.js';
+import { json, err, hashPassword, randomHex, uuid, signJWT, sha256hex } from '../../_shared.js';
 
 export async function onRequestPost({ request, env }) {
   let body;
