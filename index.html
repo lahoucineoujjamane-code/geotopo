@@ -21,15 +21,16 @@ html,body{height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans
 #map{position:fixed;inset:0;background:#dde3ea;z-index:0}
 
 /* Top bar */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:10px;
-  padding:max(10px,env(safe-area-inset-top)) 14px 10px;background:linear-gradient(180deg,rgba(13,20,33,.96),rgba(13,20,33,.82) 70%,transparent);pointer-events:none}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:7px;
+  padding:max(8px,env(safe-area-inset-top)) 10px 8px;background:linear-gradient(180deg,rgba(13,20,33,.97),rgba(13,20,33,.85) 70%,transparent);pointer-events:none}
 .topbar>*{pointer-events:auto}
-.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px}
+.brand{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;flex-shrink:0}
 .brand .mk{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:17px solid var(--accent)}
 .brand b{color:var(--accent)}
-.brand .ver{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px;margin-left:2px}
+.brand .ver{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.5px;margin-left:1px}
+@media(max-width:400px){.brand .ver{display:none}}
 .spacer{flex:1}
-.icobtn{pointer-events:auto;width:40px;height:40px;border-radius:11px;background:var(--surface);border:1px solid var(--line);color:var(--txt);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.icobtn{pointer-events:auto;width:46px;height:46px;border-radius:13px;background:var(--surface);border:1px solid var(--line);color:var(--txt);font-size:21px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.35);flex-shrink:0}
 .icobtn:active{transform:scale(.94)}
 .icobtn.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent)}
 
@@ -51,7 +52,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;
   background:var(--surface);border-top-left-radius:18px;border-top-right-radius:18px;
   box-shadow:0 -8px 30px rgba(0,0,0,.5);
-  transform:translateY(calc(100% - 116px));transition:transform .28s cubic-bezier(.4,0,.2,1);
+  transform:translateY(calc(100% - 64px));transition:transform .28s cubic-bezier(.4,0,.2,1);
   max-height:90vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
 .sheet.half{transform:translateY(calc(100% - var(--sheet-h)))}
 .sheet.full{transform:translateY(0)}
@@ -148,6 +149,56 @@ input[type=file]{display:none}
 /* ── contour delete button ── */
 #dClearContour { border-color: var(--acc2,#f5a623) !important; color: var(--acc2,#f5a623) !important; }
 #dClearContour:active { background: rgba(245,166,35,0.15) !important; }
+
+/* ── UI REDESIGN v3 — Carte maximisée ── */
+.sheet{transform:translateY(calc(100% - 64px)) !important;}
+/* ════ UI v4 — Boutons plus grands & faciles à toucher ════ */
+
+/* Bottom sheet : poignée visible, peek confortable */
+.sheet.half{transform:translateY(calc(100% - 48vh))}
+.sheet.full{transform:translateY(0)}
+
+/* Tabs : pills lisibles, scroll horizontal fluide */
+.tabs{display:flex;overflow-x:auto;padding:6px 10px 8px;gap:6px;
+      scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:9px 16px;border-radius:22px;
+     font-size:13px;font-weight:600;white-space:nowrap;
+     background:var(--surface2);color:var(--txt2);border:1px solid var(--line);
+     cursor:pointer;transition:all .15s;min-height:40px;display:flex;align-items:center;gap:5px}
+.tab.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent)}
+.tab:active{transform:scale(.96)}
+
+/* Poignée du sheet */
+.sheet::before{content:"";display:block;width:42px;height:5px;
+  border-radius:3px;background:rgba(255,255,255,.3);
+  margin:9px auto 5px}
+
+/* Outils de dessin : boutons plus grands, plus d'espace tactile */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tool{background:var(--surface2);border:1px solid var(--line);border-radius:14px;
+  color:var(--txt);padding:14px 8px;text-align:center;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;min-height:72px;transition:all .12s}
+.tool:active{transform:scale(.95);background:var(--surface)}
+.tool .ic{font-size:24px;line-height:1}
+.tool.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent)}
+.tool.danger.on{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* Titres de section plus aérés */
+.sheetbody h4{font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px}
+.sheetbody h4:first-child{margin-top:8px}
+
+/* Boutons d'action (Aller, Copier...) plus grands */
+.btn{min-height:46px;font-size:14px;font-weight:600;border-radius:12px}
+.btn.primary{background:var(--accent);color:var(--accent-d);border:none}
+
+/* Champs de saisie plus grands */
+input[type=number],input[type=text]{min-height:46px;font-size:15px;
+  border-radius:12px;padding:0 14px}
+
+
 </style>
 </head>
 <body>
@@ -156,10 +207,28 @@ input[type=file]{display:none}
 <div class="topbar">
   <div class="brand"><span class="mk"></span> GeoTopo <b>Pro</b><span class="ver">v2.1</span></div>
   <span class="spacer"></span>
+  <button class="icobtn" id="btnSave" title="Enregistrer le projet (Ctrl+S)" onclick="saveProject()" style="font-size:16px">💾</button>
+  <button class="icobtn" id="btnOpen" title="Ouvrir un projet" onclick="openProject()" style="font-size:16px">📂</button>
   <button class="icobtn" id="btnLayers" title="Fonds de carte">🗺</button>
   <button class="icobtn" id="btnLocate" title="Ma position">◎</button>
   <button class="icobtn" id="btnGPSRT" title="GPS temps réel" onclick="toggleGPS()">📡</button>
   <button class="icobtn" id="btnLang">EN</button>
+</div>
+
+<!-- PROJECT MODAL -->
+<div id="projectModal" style="display:none;position:fixed;inset:0;z-index:5000;
+  background:rgba(0,15,40,.88);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:16px">
+  <div id="projectModalBox" style="background:#0d1421;border:1px solid #1e3a5f;
+    border-radius:18px;padding:0;width:440px;max-width:100%;max-height:88vh;
+    overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid #1e3a5f">
+      <span id="projectModalTitle" style="font-size:16px;font-weight:700;color:#e2e8f0;flex:1"></span>
+      <button onclick="closeProjectModal()" style="background:none;border:none;color:#8294b5;
+        font-size:20px;cursor:pointer;padding:4px;line-height:1">✕</button>
+    </div>
+    <div id="projectModalBody" style="flex:1;overflow-y:auto;padding:16px 20px"></div>
+  </div>
 </div>
 
 <div class="livechip" id="liveChip"></div>
@@ -221,10 +290,16 @@ input[type=file]{display:none}
       <div class="kv" id="coordOut"><div class="k" data-i18n="move_map">Déplacez la carte…</div></div>
       <h4 data-i18n="h_goto">Aller à un point</h4>
       <div class="btnrow two">
-        <input id="gX" placeholder="X / Lon">
-        <input id="gY" placeholder="Y / Lat">
+        <input id="gX" placeholder="X / Lon" type="number" step="any" style="font-size:13px">
+        <input id="gY" placeholder="Y / Lat" type="number" step="any" style="font-size:13px">
       </div>
-      <button class="btn primary" id="goBtn" style="margin-top:8px" data-i18n="goto_add">Aller / Ajouter point</button>
+      <div class="btnrow two" style="margin-top:8px;gap:6px">
+        <button class="btn primary" id="goBtn" data-i18n="goto_add">Aller →</button>
+        <button class="btn" id="goClear" title="Effacer les coordonnées"
+          style="background:var(--surface2,#111e35);color:var(--txt,#e2e8f0);border:1px solid var(--border,#1e3a5f);flex-shrink:0;min-width:40px">
+          ✕
+        </button>
+      </div>
     </div>
 
     <!-- CONVERT (batch like TWCC) -->
@@ -368,5 +443,50 @@ input[type=file]{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="app.js"></script>
 <div id="gpsChip" style="display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:1500;background:rgba(17,24,39,0.95);border:2px solid #1fd1a8;border-radius:20px;padding:8px 16px;font:600 12px/1.5 ui-monospace,monospace;color:#1fd1a8;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none;min-width:200px"></div>
+<div id="saveIndicator">✓ Sauvegardé</div>
+<script>
+/* ── Stubs pour APK (cloud.js non disponible) ── */
+if(typeof saveProject==="undefined"){
+  window.saveProject=function(){
+    // Sauvegarde locale via export GeoJSON
+    if(typeof drawn!=="undefined"&&drawn.getLayers().length>0){
+      const fc={type:"FeatureCollection",features:[]};
+      drawn.getLayers().forEach(l=>{try{fc.features.push(l.toGeoJSON());}catch(e){}});
+      const blob=new Blob([JSON.stringify(fc,null,2)],{type:"application/json"});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download="projet_geotopo_"+Date.now()+".geojson";
+      a.click();
+      toast("Projet exporté en GeoJSON");
+    } else {
+      toast("Aucun élément à sauvegarder",true);
+    }
+  };
+}
+if(typeof openProject==="undefined"){
+  window.openProject=function(){
+    const inp=document.createElement("input");
+    inp.type="file";
+    inp.accept=".geojson,.json,.kml,.gpx";
+    inp.onchange=function(e){
+      const f=e.target.files[0];
+      if(!f)return;
+      const r=new FileReader();
+      r.onload=function(ev){
+        try{
+          const gj=JSON.parse(ev.target.result);
+          if(typeof addGeoJSON==="function")addGeoJSON(gj);
+          else toast("Fichier chargé");
+        }catch(err){toast("Erreur: "+err.message,true);}
+      };
+      r.readAsText(f);
+    };
+    inp.click();
+  };
+}
+if(typeof toggleUserMenu==="undefined"){
+  window.toggleUserMenu=function(){toast("Cloud non disponible en mode APK local");};
+}
+</script>
 </body>
 </html>
