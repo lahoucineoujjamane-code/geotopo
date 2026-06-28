@@ -14,23 +14,24 @@
   --bg:#0d1421; --surface:#141d2e; --surface2:#1c2840; --line:#2a3a5a;
   --txt:#eaf0fa; --muted:#8294b5; --accent:#1fd1a8; --accent-d:#04231d;
   --blue:#3b82f6; --amber:#f5a623; --red:#ef4444; --violet:#a855f7;
-  --sheet-h: 45vh;
+  --sheet-h: 50vh;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden;overscroll-behavior:none}
 #map{position:fixed;inset:0;background:#dde3ea;z-index:0}
 
 /* Top bar */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:7px;
-  padding:max(8px,env(safe-area-inset-top)) 10px 8px;background:linear-gradient(180deg,rgba(13,20,33,.97),rgba(13,20,33,.85) 70%,transparent);pointer-events:none}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:6px;
+  padding:max(8px,env(safe-area-inset-top)) 8px 8px;background:linear-gradient(180deg,rgba(13,20,33,.97),rgba(13,20,33,.85) 70%,transparent);pointer-events:none;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.topbar::-webkit-scrollbar{display:none}
 .topbar>*{pointer-events:auto}
-.brand{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:5px;font-weight:700;font-size:14px;flex-shrink:0}
 .brand .mk{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:17px solid var(--accent)}
 .brand b{color:var(--accent)}
 .brand .ver{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.5px;margin-left:1px}
 @media(max-width:400px){.brand .ver{display:none}}
 .spacer{flex:1}
-.icobtn{pointer-events:auto;width:46px;height:46px;border-radius:13px;background:var(--surface);border:1px solid var(--line);color:var(--txt);font-size:21px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.35);flex-shrink:0}
+.icobtn{pointer-events:auto;width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--txt);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.35);flex-shrink:0}
 .icobtn:active{transform:scale(.94)}
 .icobtn.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent)}
 
@@ -52,7 +53,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;
   background:var(--surface);border-top-left-radius:18px;border-top-right-radius:18px;
   box-shadow:0 -8px 30px rgba(0,0,0,.5);
-  transform:translateY(calc(100% - 64px));transition:transform .28s cubic-bezier(.4,0,.2,1);
+  transform:translateY(calc(100% - 132px));transition:transform .28s cubic-bezier(.4,0,.2,1);
   max-height:90vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
 .sheet.half{transform:translateY(calc(100% - var(--sheet-h)))}
 .sheet.full{transform:translateY(0)}
@@ -150,12 +151,10 @@ input[type=file]{display:none}
 #dClearContour { border-color: var(--acc2,#f5a623) !important; color: var(--acc2,#f5a623) !important; }
 #dClearContour:active { background: rgba(245,166,35,0.15) !important; }
 
-/* ── UI REDESIGN v3 — Carte maximisée ── */
-.sheet{transform:translateY(calc(100% - 64px)) !important;}
 /* ════ UI v4 — Boutons plus grands & faciles à toucher ════ */
 
 /* Bottom sheet : poignée visible, peek confortable */
-.sheet.half{transform:translateY(calc(100% - 48vh))}
+.sheet.half{transform:translateY(calc(100% - 50vh))}
 .sheet.full{transform:translateY(0)}
 
 /* Tabs : pills lisibles, scroll horizontal fluide */
@@ -169,10 +168,7 @@ input[type=file]{display:none}
 .tab.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent)}
 .tab:active{transform:scale(.96)}
 
-/* Poignée du sheet */
-.sheet::before{content:"";display:block;width:42px;height:5px;
-  border-radius:3px;background:rgba(255,255,255,.3);
-  margin:9px auto 5px}
+
 
 /* Outils de dessin : boutons plus grands, plus d'espace tactile */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -199,6 +195,13 @@ input[type=number],input[type=text]{min-height:46px;font-size:15px;
   border-radius:12px;padding:0 14px}
 
 
+
+/* Sur petit écran : compacter la marque pour montrer tous les boutons */
+@media(max-width:430px){
+  .brand b,.brand .ver{display:none}
+  .brand{font-size:0}
+  .brand .mk{margin-right:0}
+}
 </style>
 </head>
 <body>

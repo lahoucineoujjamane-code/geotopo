@@ -210,8 +210,8 @@ safe("tabs",()=>{
     const pane=tab.getAttribute("data-pane");
     tabs.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===tab));
     document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.getAttribute("data-pane")===pane));
-    const sheet=document.getElementById("sheet");
-    if(sheet.classList.contains("half")===false && sheet.classList.contains("full")===false) setSheet("half");
+    // Toujours ouvrir le menu en cliquant un onglet
+    if(sheetState==="closed") setSheet("half");
   });
 });
 
@@ -221,25 +221,32 @@ function setSheet(s){
   sh.classList.remove("half","full"); sheetState=s;
   if(s==="half") sh.classList.add("half");
   else if(s==="full") sh.classList.add("full");
-  setTimeout(()=>map.invalidateSize(),300);
+  // "closed" = aucune classe → peek de base (132px)
+  setTimeout(()=>{ if(window.map) map.invalidateSize(); },320);
 }
 safe("sheet-drag",()=>{
   const grip=document.getElementById("grip");
-  let startY=0,startState="half",dragging=false;
-  const onStart=y=>{dragging=true;startY=y;startState=sheetState;};
-  const onMove=y=>{ if(!dragging) return; };
+  let startY=0,startState="half",dragging=false,moved=false;
+  const onStart=y=>{dragging=true;startY=y;startState=sheetState;moved=false;};
   const onEnd=y=>{
     if(!dragging) return; dragging=false;
     const dy=y-startY;
-    if(dy<-40){ setSheet(startState==="half"?"full":"full"); }
-    else if(dy>40){ setSheet(startState==="full"?"half":"closed"); }
+    if(Math.abs(dy)<10){
+      // Tap simple → cycle: closed→half→full→closed
+      if(sheetState==="closed") setSheet("half");
+      else if(sheetState==="half") setSheet("full");
+      else setSheet("closed");
+      return;
+    }
+    // Glissement
+    if(dy<-40){ setSheet(sheetState==="closed"?"half":"full"); }
+    else if(dy>40){ setSheet(sheetState==="full"?"half":"closed"); }
   };
   grip.addEventListener("touchstart",e=>onStart(e.touches[0].clientY),{passive:true});
   grip.addEventListener("touchend",e=>onEnd(e.changedTouches[0].clientY));
   grip.addEventListener("mousedown",e=>{onStart(e.clientY);
     const mu=ev=>{onEnd(ev.clientY);document.removeEventListener("mouseup",mu);};
     document.addEventListener("mouseup",mu);});
-  grip.addEventListener("click",()=>{ setSheet(sheetState==="half"?"full":"half"); });
 });
 
 /* ---------- 6. Top bar buttons ---------- */
@@ -488,6 +495,21 @@ function showLive(){
   showVertexTable(all.map(v=>[v[1],v[0]]),true);
 }
 safe("goto",()=>{
+  function clearGotoFields(){
+    const fx=document.getElementById("gX");
+    const fy=document.getElementById("gY");
+    if(fx) fx.value="";
+    if(fy) fy.value="";
+    if(fx) fx.focus();
+  }
+
+  document.getElementById("goClear").onclick=()=>{
+    clearGotoFields();
+    // Also remove the goto marker from map
+    if(gotoLayer) gotoLayer.clearLayers();
+    toast(LANG==="fr"?"Point cible effacé":"Target cleared");
+  };
+
   document.getElementById("goBtn").onclick=()=>{
     const xv=parseFloat(document.getElementById("gX").value);
     const yv=parseFloat(document.getElementById("gY").value);
@@ -518,7 +540,18 @@ safe("goto",()=>{
     ).openPopup();
     map.flyTo([lat,lng],16,{duration:1.0});
     toast(t("added")+" — "+(geo?lat.toFixed(5)+", "+lng.toFixed(5):"X:"+xv.toFixed(0)+" Y:"+yv.toFixed(0)));
+    // Clear fields after successful goto
+    clearGotoFields();
   };
+
+  // Allow Enter key on inputs to trigger goto
+  ["gX","gY"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener("keydown", e=>{
+      if(e.key==="Enter") document.getElementById("goBtn").click();
+      if(e.key==="Escape") document.getElementById("goClear").click();
+    });
+  });
 });
 
 /* ---------- 10. Describe / list / vertices ---------- */
