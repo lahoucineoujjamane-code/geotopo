@@ -10,215 +10,386 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 <style>
+/* ══════════════════════════════════════════════
+   VARIABLES
+══════════════════════════════════════════════ */
 :root{
   --bg:#0d1421; --surface:#141d2e; --surface2:#1c2840; --line:#2a3a5a;
-  --txt:#eaf0fa; --muted:#8294b5; --accent:#1fd1a8; --accent-d:#04231d;
+  --txt:#eaf0fa; --muted:#8294b5;
+  --accent:#1fd1a8; --accent-d:#04231d;
   --blue:#3b82f6; --amber:#f5a623; --red:#ef4444; --violet:#a855f7;
-  --sheet-h: 45vh;
+  --tab-h: 44px;
+  --tool-h: 68px;
+  --bar-h: 112px;   /* tab-h + tool-h = hauteur totale barre */
+  --sheet-h: 45vh;  /* gardé pour compatibilité app.js */
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden;overscroll-behavior:none}
-#map{position:fixed;inset:0;background:#dde3ea;z-index:0}
+html,body{height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--txt);overflow:hidden;overscroll-behavior:none}
 
-/* ══ Top bar ══ */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:8px;
+/* ══ Carte — laisser la place à la barre ══ */
+#map{
+  position:fixed;inset:0;background:#dde3ea;z-index:0;
+  bottom:var(--bar-h); /* ne passe pas sous la barre */
+}
+
+/* ══════════════════════════════════════════════
+   TOP BAR
+══════════════════════════════════════════════ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  display:flex;align-items:center;gap:8px;
   padding:max(10px,env(safe-area-inset-top)) 12px 10px;
-  background:linear-gradient(180deg,rgba(13,20,33,.97),rgba(13,20,33,.82) 70%,transparent);
-  pointer-events:none}
+  background:linear-gradient(180deg,rgba(13,20,33,.97) 0%,rgba(13,20,33,.75) 75%,transparent);
+  pointer-events:none;
+}
 .topbar>*{pointer-events:auto}
 .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px}
 .brand .mk{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:17px solid var(--accent)}
 .brand b{color:var(--accent)}
 .brand .ver{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px;margin-left:2px}
 .spacer{flex:1}
-
-/* ── Boutons icône (topbar) — améliorés ── */
 .icobtn{
-  pointer-events:auto;width:38px;height:38px;border-radius:10px;
-  background:rgba(28,40,64,.9);border:1px solid var(--line);color:var(--txt);
+  width:38px;height:38px;border-radius:10px;
+  background:rgba(28,40,64,.92);border:1px solid var(--line);color:var(--txt);
   font-size:17px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);
-  transition:background .15s, border-color .15s, transform .1s;
-  backdrop-filter:blur(4px);
+  transition:background .15s,border-color .15s,transform .1s;
+  backdrop-filter:blur(6px);
 }
 .icobtn:hover{background:var(--surface2);border-color:var(--accent)}
-.icobtn:active{transform:scale(.92)}
-.icobtn.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent);box-shadow:0 0 12px rgba(31,209,168,.3)}
+.icobtn:active{transform:scale(.91)}
+.icobtn.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent);
+  box-shadow:0 0 12px rgba(31,209,168,.35)}
 
-/* ══ Live coordinate chip ══ */
-.livechip{position:fixed;left:50%;transform:translateX(-50%);z-index:950;
+/* ══ Live coord chip ══ */
+.livechip{
+  position:fixed;left:50%;transform:translateX(-50%);z-index:950;
   background:var(--surface);border:1px solid var(--accent);border-radius:999px;
   padding:7px 16px;font:600 12px/1 ui-monospace,monospace;color:var(--txt);
-  box-shadow:0 4px 16px rgba(0,0,0,.4);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
-  top:calc(max(10px,env(safe-area-inset-top)) + 54px);display:none}
+  box-shadow:0 4px 16px rgba(0,0,0,.4);white-space:nowrap;max-width:92vw;
+  overflow:hidden;text-overflow:ellipsis;
+  top:calc(max(10px,env(safe-area-inset-top)) + 52px);display:none;
+}
 .livechip b{color:var(--accent)}
-.livechip.warn{border-color:var(--amber)}
-.livechip.warn b{color:var(--amber)}
+.livechip.warn{border-color:var(--amber)}.livechip.warn b{color:var(--amber)}
 
-/* ══ Floating controls ══ */
-.mapctl{position:fixed;right:12px;z-index:900;display:flex;flex-direction:column;gap:8px}
-.mapctl.top{top:calc(max(10px,env(safe-area-inset-top)) + 56px)}
+/* ══ Boutons tracé ══ */
+#drawCtl{
+  display:none;position:fixed;left:50%;transform:translateX(-50%);z-index:1300;
+  bottom:calc(var(--bar-h) + 10px + env(safe-area-inset-bottom));gap:10px;
+}
+#drawFinish{
+  display:flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#1fd1a8,#0eb890);color:#04231d;border:none;
+  padding:12px 22px;border-radius:999px;font-size:15px;font-weight:700;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer;
+}
+#drawCancel{
+  display:flex;align-items:center;gap:7px;
+  background:#ef4444;color:#fff;border:none;
+  padding:12px 22px;border-radius:999px;font-size:15px;font-weight:700;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer;
+}
 
-/* ══ Bottom sheet ══ */
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;
-  background:var(--surface);border-top-left-radius:18px;border-top-right-radius:18px;
-  box-shadow:0 -8px 30px rgba(0,0,0,.5);
-  transform:translateY(calc(100% - 116px));transition:transform .28s cubic-bezier(.4,0,.2,1);
-  max-height:90vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
-.sheet.half{transform:translateY(calc(100% - var(--sheet-h)))}
-.sheet.full{transform:translateY(0)}
-.grip{padding:10px 0 6px;display:flex;justify-content:center;cursor:grab;touch-action:none}
-.grip span{width:42px;height:5px;border-radius:3px;background:var(--line)}
+/* ══════════════════════════════════════════════
+   BARRE INFÉRIEURE — override du .sheet original
+   La barre reste TOUJOURS en bas, fixe
+══════════════════════════════════════════════ */
+.sheet{
+  position:fixed !important;
+  bottom:0 !important;
+  left:0 !important; right:0 !important;
+  transform:none !important;           /* annuler l'animation app.js */
+  transition:none !important;
+  max-height:var(--bar-h) !important;  /* mode compact par défaut */
+  border-top-left-radius:16px;
+  border-top-right-radius:16px;
+  background:var(--surface);
+  border-top:1px solid var(--line);
+  box-shadow:0 -6px 28px rgba(0,0,0,.5);
+  padding-bottom:env(safe-area-inset-bottom);
+  z-index:1100;
+  overflow:visible !important;          /* permettre au panel de sortir au dessus */
+}
+/* Masquer la poignée */
+.grip{display:none !important}
 
-/* ══ Onglets ══ */
-.tabs{display:flex;gap:4px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none}
+/* ══ Tabs — rangée horizontale ══ */
+.tabs{
+  display:flex;align-items:center;gap:3px;
+  padding:5px 10px 4px;height:var(--tab-h);
+  overflow-x:auto;scrollbar-width:none;
+  border-bottom:1px solid var(--line);
+}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
-  flex:0 0 auto;padding:8px 13px;border-radius:10px;
-  background:var(--surface2);border:1px solid var(--line);
+  flex:0 0 auto;padding:6px 11px;border-radius:8px;
+  background:transparent;border:1px solid transparent;
   color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;
-  display:flex;align-items:center;gap:5px;white-space:nowrap;
-  transition:background .15s, color .15s, border-color .15s;
+  display:flex;align-items:center;gap:4px;white-space:nowrap;
+  transition:background .15s,color .15s,border-color .15s;
 }
-.tab:hover{border-color:var(--accent);color:var(--txt)}
-.tab.on{background:var(--accent);color:var(--accent-d);border-color:var(--accent);box-shadow:0 2px 8px rgba(31,209,168,.2)}
+.tab:hover{color:var(--txt);background:var(--surface2);border-color:var(--line)}
+.tab.on{
+  background:var(--accent);color:var(--accent-d);border-color:var(--accent);
+  box-shadow:0 1px 8px rgba(31,209,168,.25);
+}
 
-.sheetbody{flex:1;overflow-y:auto;padding:4px 14px 20px;-webkit-overflow-scrolling:touch}
+/* ══ sheetbody — panneau coulissant vers le HAUT ══ */
+.sheetbody{
+  position:absolute !important;
+  bottom:100% !important;  /* sort AU-DESSUS de la barre */
+  left:0;right:0;
+  background:var(--surface);
+  border-top-left-radius:16px;
+  border-top-right-radius:16px;
+  border:1px solid var(--line);
+  border-bottom:none;
+  box-shadow:0 -8px 30px rgba(0,0,0,.45);
+  max-height:58vh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* masqué par défaut — glisse hors de l'écran vers le bas */
+  transform:translateY(108%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  padding:0;
+}
+/* Quand un panneau non-draw est actif → monter */
+.sheetbody.panel-open{
+  transform:translateY(0);
+}
+/* En-tête de panneau */
+.panel-hdr{
+  display:flex;align-items:center;padding:12px 14px 8px;
+  border-bottom:1px solid var(--line);position:sticky;top:0;
+  background:var(--surface);z-index:10;
+}
+.panel-hdr-title{flex:1;font-size:14px;font-weight:700;color:var(--txt)}
+.panel-close-btn{
+  width:28px;height:28px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--line);
+  color:var(--muted);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.panel-close-btn:hover{color:var(--txt);border-color:var(--accent)}
+
+/* ══ Panes ══ */
 .pane{display:none}
-.pane.on{display:block}
+.pane.on{display:block;padding:12px 14px 16px}
 
-/* ══ Grille d'outils — AMÉLIORÉE ══ */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+/* ══════════════════════════════════════════════
+   PANE DRAW → STRIP HORIZONTAL D'OUTILS
+══════════════════════════════════════════════ */
+.pane.on[data-pane="draw"]{
+  display:flex !important;
+  flex-direction:row;
+  align-items:center;
+  gap:0;
+  padding:0 !important;
+  height:var(--tool-h);
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+}
+.pane.on[data-pane="draw"]::-webkit-scrollbar{display:none}
 
-/* Bouton outil de base */
+/* Masquer les titres de sections dans le strip */
+.pane.on[data-pane="draw"] h4{ display:none }
+/* Masquer le collapse header */
+.pane.on[data-pane="draw"] .collapse-hdr{ display:none }
+/* Forcer l'affichage du contenu repliable dans le strip */
+.pane.on[data-pane="draw"] .collapse-body{
+  display:flex !important;
+  align-items:center;
+  gap:0;
+  max-height:none !important;
+  opacity:1 !important;
+  overflow:visible !important;
+  pointer-events:auto !important;
+}
+
+/* Grilles → flex horizontal */
+.pane.on[data-pane="draw"] .grid{
+  display:flex !important;
+  flex-wrap:nowrap;
+  gap:0;
+  flex-shrink:0;
+}
+
+/* ── Séparateur entre groupes ── */
+.tool-sep{
+  width:1px;height:46px;
+  background:var(--line);
+  flex-shrink:0;margin:0 6px;align-self:center;
+}
+
+/* ══ BOUTON OUTIL (strip horizontal) ══ */
 .tool{
-  background:var(--surface2);border:1px solid var(--line);border-radius:12px;color:var(--txt);
-  padding:11px 6px 10px;font-size:11px;font-weight:700;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-  transition:background .13s, border-color .13s, transform .1s, box-shadow .13s;
-  position:relative;overflow:hidden;
+  flex:0 0 auto;
+  background:transparent;
+  border:none;
+  border-right:1px solid transparent;
+  border-radius:0;
+  color:var(--txt);
+  width:58px;height:var(--tool-h);
+  font-size:10px;font-weight:700;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  transition:background .13s,border-color .13s,transform .1s;
+  position:relative;
 }
-.tool .ic{font-size:22px;line-height:1}
-.tool:hover{background:#223352;border-color:#4a6a9a;box-shadow:0 3px 10px rgba(0,0,0,.3)}
-.tool:active{transform:scale(.94)}
-.tool.on{border-color:var(--accent);box-shadow:0 0 10px rgba(31,209,168,.25)}
+.tool .ic{font-size:21px;line-height:1}
+.tool span:not(.ic){
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  width:54px;text-align:center;font-size:10px;
+}
+.tool:hover{background:var(--surface2)}
+.tool:active{transform:scale(.9)}
+.tool.on{background:rgba(31,209,168,.12)}
+/* Indicateur de catégorie — trait en bas */
+.tool.draw::after{
+  content:'';position:absolute;bottom:0;left:10%;width:80%;height:2px;
+  background:var(--blue);border-radius:2px 2px 0 0;
+}
+.tool.measure::after{
+  content:'';position:absolute;bottom:0;left:10%;width:80%;height:2px;
+  background:var(--accent);border-radius:2px 2px 0 0;
+}
+.tool.modify::after{
+  content:'';position:absolute;bottom:0;left:10%;width:80%;height:2px;
+  background:var(--amber);border-radius:2px 2px 0 0;
+}
+.tool.danger::after{
+  content:'';position:absolute;bottom:0;left:10%;width:80%;height:2px;
+  background:var(--red);border-radius:2px 2px 0 0;
+}
+.tool.draw.on{background:rgba(59,130,246,.15);color:var(--blue)}
+.tool.measure.on{background:rgba(31,209,168,.15);color:var(--accent)}
+.tool.danger.on{background:rgba(239,68,68,.15);color:var(--red)}
 
-/* Catégorie Dessin → bordure bleue */
-.tool.draw{border-bottom:2px solid var(--blue)}
-.tool.draw.on{background:rgba(59,130,246,.18);border-color:var(--blue);box-shadow:0 0 10px rgba(59,130,246,.25)}
-/* Catégorie Modifier → bordure ambre */
-.tool.modify{border-bottom:2px solid var(--amber)}
-.tool.modify:hover{border-color:var(--amber)}
-/* Catégorie Mesure → bordure accent */
-.tool.measure{border-bottom:2px solid var(--accent)}
-.tool.measure:hover{border-color:var(--accent)}
-/* Danger (supprimer / effacer) */
-.tool.danger{border-bottom:2px solid var(--red)}
-.tool.danger.on{background:rgba(239,68,68,.18);border-color:var(--red);color:var(--red);box-shadow:0 0 10px rgba(239,68,68,.25)}
-
-h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 0 7px;font-weight:800}
+/* ══════════════════════════════════════════════
+   ÉLÉMENTS DE FORMULAIRE (panneaux non-draw)
+══════════════════════════════════════════════ */
+h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:12px 0 7px;font-weight:800}
 h4:first-child{margin-top:4px}
-
-/* ══ Section repliable ══ */
-.collapse-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  cursor:pointer;user-select:none;
-}
-.collapse-hdr h4{margin:0;cursor:pointer}
-.collapse-arr{
-  font-size:14px;color:var(--muted);transition:transform .2s;
-  padding:4px 2px;line-height:1;
-}
-.collapse-arr.open{transform:rotate(180deg)}
-.collapse-body{overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1),opacity .2s}
-.collapse-body.closed{max-height:0!important;opacity:0;pointer-events:none}
-
 label.fld{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
-select,input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--txt);
-  padding:11px 12px;border-radius:10px;font-size:14px;font-family:inherit;transition:border-color .15s}
+select,input,textarea{
+  width:100%;background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  padding:11px 12px;border-radius:10px;font-size:14px;font-family:inherit;
+  transition:border-color .15s;
+}
 select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent)}
 textarea{resize:vertical;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5}
 
-/* ══ Boutons généraux — améliorés ══ */
 .btn{
-  display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px;
+  display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:11px;
   border-radius:11px;background:var(--surface2);border:1px solid var(--line);color:var(--txt);
   font-size:13px;font-weight:600;cursor:pointer;
-  transition:background .13s, border-color .13s, transform .1s;
+  transition:background .13s,border-color .13s,transform .1s;
 }
 .btn:hover{background:#223352;border-color:#4a6a9a}
 .btn:active{transform:scale(.98)}
-.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 3px 10px rgba(59,130,246,.25)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.primary:hover{background:#2d74ee}
-.btn.accent{background:linear-gradient(135deg,var(--accent),#0eb890);border-color:var(--accent);color:var(--accent-d);box-shadow:0 3px 10px rgba(31,209,168,.2)}
+.btn.accent{
+  background:linear-gradient(135deg,var(--accent),#0eb890);
+  border-color:var(--accent);color:var(--accent-d);
+}
 .btn.accent:hover{filter:brightness(1.08)}
 .btn.ghost{background:transparent}
 .btn.sm{padding:9px;font-size:12px}
 .btn.danger{border-color:var(--red);color:var(--red)}
 .btn.danger:hover{background:rgba(239,68,68,.1)}
-.btnrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.btnrow{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
 .btnrow.two{grid-template-columns:repeat(2,1fr)}
 
-/* ══ Autres composants ══ */
 .kv{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:12px;font:13px/1.8 ui-monospace,monospace;word-break:break-all}
 .kv .k{color:var(--muted)}.kv .v{color:var(--accent)}
 
 .dtable{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px}
-.dtable .scroll{max-height:240px;overflow:auto}
+.dtable .scroll{max-height:200px;overflow:auto}
 table{width:100%;border-collapse:collapse;font:12px/1.4 ui-monospace,monospace}
-th{position:sticky;top:0;background:var(--surface2);color:var(--muted);font-size:10px;text-transform:uppercase;
-  letter-spacing:.5px;padding:8px;text-align:left;font-weight:700}
+th{position:sticky;top:0;background:var(--surface2);color:var(--muted);font-size:10px;
+  text-transform:uppercase;letter-spacing:.5px;padding:8px;text-align:left;font-weight:700}
 td{padding:7px 8px;border-top:1px solid var(--line);color:var(--accent);white-space:nowrap}
 td.idx{color:var(--muted)}
 tr:active td{background:var(--bg)}
 
-.flist .item{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);
-  border-radius:11px;margin-bottom:8px;background:var(--bg);font-size:14px}
+.flist .item{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);
+  border-radius:11px;margin-bottom:7px;background:var(--bg);font-size:14px}
 .flist .item.sel{border-color:var(--accent);background:var(--surface2)}
-.dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .flist .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
 .flist .nm small{color:var(--muted);font-weight:400}
 .flist .del{color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px}
 .flist .del:active{color:var(--red)}
 
-.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}
+.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px}
 .empty{color:var(--muted);font-size:13px;font-style:italic;padding:14px 0;text-align:center}
-.status{font-size:12px;margin-top:10px;min-height:16px;line-height:1.5}
+.status{font-size:12px;margin-top:8px;min-height:14px;line-height:1.5}
 .status.err{color:var(--red)}.status.ok{color:var(--accent)}.status.busy{color:var(--amber)}
 
-.crschip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--line);
-  border-radius:999px;padding:5px 12px;font-size:12px;color:var(--accent);margin-bottom:8px;cursor:pointer;
-  transition:border-color .15s}
+.crschip{
+  display:inline-flex;align-items:center;gap:6px;background:var(--surface2);
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px;
+  font-size:12px;color:var(--accent);margin-bottom:8px;cursor:pointer;
+  transition:border-color .15s;
+}
 .crschip:hover{border-color:var(--accent)}
 
-.toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%) translateY(20px);z-index:3000;
-  background:var(--accent);color:var(--accent-d);padding:11px 20px;border-radius:11px;font-size:14px;font-weight:600;
-  opacity:0;transition:.25s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:90vw;text-align:center}
+/* Sections repliables */
+.collapse-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-top:12px}
+.collapse-hdr h4{margin:0;cursor:pointer}
+.collapse-arr{font-size:13px;color:var(--muted);transition:transform .2s;padding:4px 2px;line-height:1}
+.collapse-arr.open{transform:rotate(180deg)}
+.collapse-body{overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1),opacity .2s}
+.collapse-body.closed{max-height:0!important;opacity:0;pointer-events:none}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(20px);z-index:3000;
+  background:var(--accent);color:var(--accent-d);padding:10px 20px;border-radius:11px;
+  font-size:14px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;
+  box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:90vw;text-align:center;
+  bottom:calc(var(--bar-h) + 10px);
+}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--red);color:#fff}
 
-.fatal{position:fixed;left:0;right:0;bottom:0;z-index:99999;background:var(--red);color:#fff;
-  font:11px/1.4 ui-monospace,monospace;padding:8px 12px;max-height:35vh;overflow:auto;white-space:pre-wrap;display:none}
-
+.fatal{
+  position:fixed;left:0;right:0;bottom:0;z-index:99999;background:var(--red);color:#fff;
+  font:11px/1.4 ui-monospace,monospace;padding:8px 12px;max-height:35vh;overflow:auto;
+  white-space:pre-wrap;display:none;
+}
 input[type=file]{display:none}
 .leaflet-draw{display:none!important}
 .leaflet-control-attribution{font-size:9px;background:rgba(255,255,255,.7)}
+/* Contrôles Leaflet au dessus de la barre */
+.leaflet-bottom{bottom:calc(var(--bar-h) + 6px)!important}
 
+/* ══ Desktop ══ */
 @media(min-width:760px){
-  .sheet{left:auto;right:14px;bottom:14px;width:380px;border-radius:16px;
-    transform:none!important;max-height:calc(100vh - 84px);border:1px solid var(--line)}
-  .grip{display:none}
+  :root{--bar-h:112px}
+  .sheetbody{
+    left:auto;right:14px;
+    width:370px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    bottom:calc(100% + 6px);
+    max-height:calc(100vh - var(--bar-h) - 80px);
+  }
+  #map{bottom:var(--bar-h)}
 }
 
-/* ── Contour delete ── */
-#dClearContour{border-color:var(--amber)!important;color:var(--amber)!important}
-#dClearContour:active{background:rgba(245,166,35,.15)!important}
+/* Contour delete */
+#dClearContour{color:var(--amber)!important}
+#dClearContour:hover{background:rgba(245,166,35,.1)!important}
 </style>
 </head>
 <body>
 <div id="map"></div>
 
-<!-- ══ Top bar ══ -->
+<!-- ══ TOP BAR ══ -->
 <div class="topbar">
   <div class="brand">
     <span class="mk"></span> GeoTopo <b>Pro</b><span class="ver">v2.1</span>
@@ -233,220 +404,252 @@ input[type=file]{display:none}
 <div class="livechip" id="liveChip"></div>
 
 <!-- ══ Boutons tracé (flottants) ══ -->
-<div id="drawCtl" style="display:none;position:fixed;left:50%;transform:translateX(-50%);z-index:1300;
-  bottom:calc(116px + env(safe-area-inset-bottom));gap:10px">
-  <button id="drawFinish" style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,#1fd1a8,#0eb890);color:#04231d;border:none;
-    padding:13px 22px;border-radius:999px;font-size:15px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer">
-    ✓ <span data-i18n="finish">Terminer</span></button>
-  <button id="drawCancel" style="display:flex;align-items:center;gap:7px;background:#ef4444;color:#fff;border:none;
-    padding:13px 22px;border-radius:999px;font-size:15px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer">
-    ✕ <span data-i18n="cancel">Annuler</span></button>
+<div id="drawCtl">
+  <button id="drawFinish">✓ <span data-i18n="finish">Terminer</span></button>
+  <button id="drawCancel">✕ <span data-i18n="cancel">Annuler</span></button>
 </div>
 
-<!-- ══ Bottom sheet ══ -->
+<!-- ══════════════════════════════════════════════
+     BARRE INFÉRIEURE HORIZONTALE
+     Conserve les mêmes IDs qu'app.js attend :
+       #sheet  .sheet .half/.full
+       #tabs   .tab[data-pane]
+       #sheetbody  .pane[data-pane]
+══════════════════════════════════════════════ -->
 <div class="sheet half" id="sheet">
-  <div class="grip" id="grip"><span></span></div>
 
-  <!-- Onglets -->
+  <!-- ── Tabs ── -->
   <div class="tabs" id="tabs">
-    <div class="tab on" data-pane="draw">✏️ <span data-i18n="t_draw">Dessin</span></div>
-    <div class="tab" data-pane="coords">📍 <span data-i18n="t_coords">Coordonnées</span></div>
-    <div class="tab" data-pane="convert">🔄 <span data-i18n="t_convert">Conversion</span></div>
-    <div class="tab" data-pane="io">💾 <span data-i18n="t_io">Fichiers</span></div>
-    <div class="tab" data-pane="elev">⛰️ <span data-i18n="t_elev">Altitudes</span></div>
-    <div class="tab" data-pane="list">📋 <span data-i18n="t_list">Éléments</span></div>
+    <div class="tab on" data-pane="draw"   >✏️ <span data-i18n="t_draw">Dessin</span></div>
+    <div class="tab"    data-pane="coords" >📍 <span data-i18n="t_coords">Coordonnées</span></div>
+    <div class="tab"    data-pane="convert">🔄 <span data-i18n="t_convert">Conversion</span></div>
+    <div class="tab"    data-pane="io"     >💾 <span data-i18n="t_io">Fichiers</span></div>
+    <div class="tab"    data-pane="elev"   >⛰️ <span data-i18n="t_elev">Altitudes</span></div>
+    <div class="tab"    data-pane="list"   >📋 <span data-i18n="t_list">Éléments</span></div>
   </div>
 
+  <!-- ── sheetbody : panneau coulissant + strip draw ── -->
   <div class="sheetbody" id="sheetbody">
 
-    <!-- ══════ DESSIN ══════ -->
+    <!-- ════ DRAW — strip horizontal ════ -->
     <div class="pane on" data-pane="draw">
 
-      <!-- Dessiner -->
-      <h4 data-i18n="h_draw">Dessiner</h4>
-      <div class="grid">
-        <div class="tool draw" id="dPoint"><span class="ic">📍</span><span data-i18n="point">Point</span></div>
-        <div class="tool draw" id="dLine"><span class="ic">╱</span><span data-i18n="line">Ligne</span></div>
-        <div class="tool draw" id="dPoly"><span class="ic">⬠</span><span data-i18n="polygon">Polygone</span></div>
-        <div class="tool draw" id="dRect"><span class="ic">▭</span><span data-i18n="rect">Rectangle</span></div>
-        <div class="tool draw" id="dCircle"><span class="ic">◯</span><span data-i18n="circle">Cercle</span></div>
-        <div class="tool draw" id="dEdit"><span class="ic">✎</span><span data-i18n="edit">Éditer</span></div>
-      </div>
+      <!-- Groupe Dessin -->
+      <div class="tool draw" id="dPoint" title="Point"><span class="ic">📍</span><span data-i18n="point">Point</span></div>
+      <div class="tool draw" id="dLine"  title="Ligne"><span class="ic">╱</span><span data-i18n="line">Ligne</span></div>
+      <div class="tool draw" id="dPoly"  title="Polygone"><span class="ic">⬠</span><span data-i18n="polygon">Poly</span></div>
+      <div class="tool draw" id="dRect"  title="Rectangle"><span class="ic">▭</span><span data-i18n="rect">Rect</span></div>
+      <div class="tool draw" id="dCircle" title="Cercle"><span class="ic">◯</span><span data-i18n="circle">Cercle</span></div>
+      <div class="tool draw" id="dEdit"  title="Éditer"><span class="ic">✎</span><span data-i18n="edit">Éditer</span></div>
 
-      <!-- Mesure -->
-      <h4 data-i18n="h_measure">Mesure</h4>
-      <div class="grid">
-        <div class="tool measure" id="mDist"><span class="ic">📏</span><span data-i18n="distance">Distance</span></div>
-        <div class="tool measure" id="mArea"><span class="ic">⬡</span><span data-i18n="area">Surface</span></div>
-        <div class="tool measure" id="mUnits"><span class="ic">⚖</span><span id="unitLbl">m / ha</span></div>
-      </div>
+      <div class="tool-sep"></div>
 
-      <!-- Modifier → section repliable (fermée par défaut) -->
-      <div class="collapse-hdr" id="hdr-modify" style="margin-top:14px">
-        <h4 data-i18n="h_modify" style="margin:0">Modifier</h4>
-        <span class="collapse-arr" id="arr-modify">▼</span>
-      </div>
-      <div class="collapse-body closed" id="body-modify" style="max-height:200px">
-        <div class="grid" style="margin-top:8px">
-          <div class="tool modify" id="dUndo"><span class="ic">↶</span><span data-i18n="undo">Annuler</span></div>
-          <div class="tool danger" id="dDelete"><span class="ic">🗑</span><span data-i18n="delete">Supprimer</span></div>
-          <div class="tool danger" id="dClear"><span class="ic">✕</span><span data-i18n="clear">Tout effacer</span></div>
-          <div class="tool danger" id="dClearContour" style="display:none" title="Supprimer uniquement les courbes de niveau"><span class="ic">〰</span><span>Sup. courbes</span></div>
-        </div>
-      </div>
+      <!-- Groupe Mesure -->
+      <div class="tool measure" id="mDist"  title="Distance"><span class="ic">📏</span><span data-i18n="distance">Dist.</span></div>
+      <div class="tool measure" id="mArea"  title="Surface"><span class="ic">⬡</span><span data-i18n="area">Surface</span></div>
+      <div class="tool measure" id="mUnits" title="Unités"><span class="ic">⚖</span><span id="unitLbl">m/ha</span></div>
 
+      <div class="tool-sep"></div>
+
+      <!-- Groupe Modifier (gardé dans DOM, affiché dans le strip) -->
+      <!-- collapse-hdr masqué par CSS en mode draw -->
+      <div class="collapse-hdr" id="hdr-modify"><h4 data-i18n="h_modify">Modifier</h4></div>
+      <div class="collapse-body" id="body-modify" style="max-height:none">
+        <div class="tool modify"  id="dUndo"         title="Annuler"><span class="ic">↶</span><span data-i18n="undo">Annuler</span></div>
+        <div class="tool danger"  id="dDelete"        title="Supprimer"><span class="ic">🗑</span><span data-i18n="delete">Suppr.</span></div>
+        <div class="tool danger"  id="dClear"         title="Tout effacer"><span class="ic">✕</span><span data-i18n="clear">Effacer</span></div>
+        <div class="tool danger"  id="dClearContour" title="Supprimer les courbes" style="display:none"><span class="ic">〰</span><span>Courbes</span></div>
+      </div>
+      <!-- h4 sections vides pour que app.js les trouve -->
+      <h4 data-i18n="h_draw" style="display:none">Dessiner</h4>
+      <h4 data-i18n="h_measure" style="display:none">Mesure</h4>
+      <div style="display:none" id="_grid_draw" class="grid"></div>
+      <div style="display:none" id="_grid_modify" class="grid"></div>
+      <div style="display:none" id="_grid_measure" class="grid"></div>
     </div>
 
-    <!-- ══════ COORDONNÉES ══════ -->
+    <!-- ════ COORDS ════ -->
     <div class="pane" data-pane="coords">
-      <h4 data-i18n="h_crs">Système de coordonnées</h4>
-      <div class="crschip" id="crsChip">🌐 <span id="crsName">WGS84 — Lat/Lon</span> ▾</div>
-      <div class="kv" id="coordOut"><div class="k" data-i18n="move_map">Déplacez la carte…</div></div>
-      <h4 data-i18n="h_goto">Aller à un point</h4>
-      <div class="btnrow two">
-        <input id="gX" placeholder="X / Lon">
-        <input id="gY" placeholder="Y / Lat">
+      <div class="panel-hdr">
+        <div class="panel-hdr-title">📍 <span data-i18n="t_coords">Coordonnées</span></div>
+        <div class="panel-close-btn" id="closePanel-coords">✕</div>
       </div>
-      <button class="btn primary" id="goBtn" style="margin-top:8px" data-i18n="goto_add">Aller / Ajouter point</button>
+      <div style="padding:12px 14px 16px">
+        <h4 data-i18n="h_crs">Système de coordonnées</h4>
+        <div class="crschip" id="crsChip">🌐 <span id="crsName">WGS84 — Lat/Lon</span> ▾</div>
+        <div class="kv" id="coordOut"><div class="k" data-i18n="move_map">Déplacez la carte…</div></div>
+        <h4 data-i18n="h_goto">Aller à un point</h4>
+        <div class="btnrow two">
+          <input id="gX" placeholder="X / Lon">
+          <input id="gY" placeholder="Y / Lat">
+        </div>
+        <button class="btn primary" id="goBtn" style="margin-top:8px" data-i18n="goto_add">Aller / Ajouter point</button>
+      </div>
     </div>
 
-    <!-- ══════ CONVERSION ══════ -->
+    <!-- ════ CONVERT ════ -->
     <div class="pane" data-pane="convert">
-      <h4 data-i18n="h_batch">Conversion par lot</h4>
-      <p class="note" data-i18n="batch_help">Collez des coordonnées (une par ligne) : « X Y » ou « X,Y » ou « nom,X,Y ».</p>
-      <label class="fld" data-i18n="from_crs">Système source</label>
-      <div class="crschip" id="srcChip">🌐 <span id="srcName">WGS84 — Lat/Lon</span> ▾</div>
-      <label class="fld" data-i18n="to_crs">Système cible</label>
-      <div class="crschip" id="dstChip">🌐 <span id="dstName">UTM 29N</span> ▾</div>
-      <label class="fld" data-i18n="input_coords">Coordonnées à convertir</label>
-      <textarea id="batchIn" rows="5" placeholder="-10.05 28.98&#10;-10.06 29.01&#10;..."></textarea>
-      <button class="btn accent" id="batchRun" style="margin-top:8px" data-i18n="convert_btn">Convertir</button>
-      <div class="status" id="batchStatus"></div>
-      <div id="batchResult"></div>
-      <div class="btnrow two" id="batchExport" style="display:none">
-        <button class="btn sm" id="batchCopy" data-i18n="copy">Copier</button>
-        <button class="btn sm" id="batchCsv">CSV</button>
+      <div class="panel-hdr">
+        <div class="panel-hdr-title">🔄 <span data-i18n="t_convert">Conversion par lot</span></div>
+        <div class="panel-close-btn" id="closePanel-convert">✕</div>
+      </div>
+      <div style="padding:12px 14px 16px">
+        <p class="note" data-i18n="batch_help">Collez des coordonnées (une par ligne) : « X Y » ou « X,Y » ou « nom,X,Y ».</p>
+        <label class="fld" data-i18n="from_crs">Système source</label>
+        <div class="crschip" id="srcChip">🌐 <span id="srcName">WGS84 — Lat/Lon</span> ▾</div>
+        <label class="fld" data-i18n="to_crs">Système cible</label>
+        <div class="crschip" id="dstChip">🌐 <span id="dstName">UTM 29N</span> ▾</div>
+        <label class="fld" data-i18n="input_coords">Coordonnées à convertir</label>
+        <textarea id="batchIn" rows="4" placeholder="-10.05 28.98&#10;-10.06 29.01&#10;..."></textarea>
+        <button class="btn accent" id="batchRun" style="margin-top:8px" data-i18n="convert_btn">Convertir</button>
+        <div class="status" id="batchStatus"></div>
+        <div id="batchResult"></div>
+        <div class="btnrow two" id="batchExport" style="display:none">
+          <button class="btn sm" id="batchCopy" data-i18n="copy">Copier</button>
+          <button class="btn sm" id="batchCsv">CSV</button>
+        </div>
       </div>
     </div>
 
-    <!-- ══════ FICHIERS ══════ -->
+    <!-- ════ IO ════ -->
     <div class="pane" data-pane="io">
-
-      <!-- Importer -->
-      <h4 data-i18n="h_import">Importer</h4>
-      <button class="btn" id="impBtn">📥 <span data-i18n="import_file">Importer un fichier</span></button>
-      <input type="file" id="impFile" accept=".kml,.geojson,.json,.csv,.gpx,.dxf,.txt">
-      <p class="note" data-i18n="import_formats">Formats : KML, GeoJSON, CSV, GPX, DXF</p>
-
-      <!-- Informations du Plan → section repliable -->
-      <div class="collapse-hdr" id="hdr-planinfo" style="margin-top:14px">
-        <h4 style="margin:0">📋 Informations du Plan</h4>
-        <span class="collapse-arr" id="arr-planinfo">▼</span>
+      <div class="panel-hdr">
+        <div class="panel-hdr-title">💾 <span data-i18n="t_io">Fichiers</span></div>
+        <div class="panel-close-btn" id="closePanel-io">✕</div>
       </div>
-      <div class="collapse-body closed" id="body-planinfo" style="max-height:400px">
-        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
-          <input id="infoDemandeur" placeholder="Demandé par (nom)">
-          <input id="infoRef"       placeholder="Référence foncière (ex: JA 70818)">
-          <input id="infoSise"      placeholder="Sise / Douar / Commune">
-          <input id="infoProp"      placeholder="Propriété dite (ex: Amraoun)">
-          <input id="infoCNI"       placeholder="C.N.I. du propriétaire">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <input id="infoEchelle"    placeholder="Échelle (ex: 5000)" value="5000">
-            <input id="infoCRS"        placeholder="SCR (ex: Lambert Maroc S)" value="Lambert Maroc S">
+      <div style="padding:12px 14px 16px">
+        <h4 data-i18n="h_import">Importer</h4>
+        <button class="btn" id="impBtn">📥 <span data-i18n="import_file">Importer un fichier</span></button>
+        <input type="file" id="impFile" accept=".kml,.geojson,.json,.csv,.gpx,.dxf,.txt">
+        <p class="note" data-i18n="import_formats">Formats : KML, GeoJSON, CSV, GPX, DXF</p>
+
+        <!-- Infos plan — repliable -->
+        <div class="collapse-hdr" id="hdr-planinfo">
+          <h4 style="margin:0">📋 Informations du Plan</h4>
+          <span class="collapse-arr" id="arr-planinfo">▼</span>
+        </div>
+        <div class="collapse-body closed" id="body-planinfo" style="max-height:360px">
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+            <input id="infoDemandeur" placeholder="Demandé par (nom)">
+            <input id="infoRef"       placeholder="Référence foncière (ex: JA 70818)">
+            <input id="infoSise"      placeholder="Sise / Douar / Commune">
+            <input id="infoProp"      placeholder="Propriété dite (ex: Amraoun)">
+            <input id="infoCNI"       placeholder="C.N.I. du propriétaire">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <input id="infoEchelle" placeholder="Échelle" value="5000">
+              <input id="infoCRS"     placeholder="SCR" value="Lambert Maroc S">
+            </div>
+            <input id="infoTopographe" placeholder="Nom du Topographe">
+            <select id="infoBornePrefix">
+              <option value="B">B (Borne)</option>
+              <option value="PT">PT (Point)</option>
+              <option value="S">S (Sommet)</option>
+              <option value="">Numéro seul</option>
+            </select>
           </div>
-          <input id="infoTopographe" placeholder="Nom du Topographe">
-          <select id="infoBornePrefix">
-            <option value="B">B (Borne)</option>
-            <option value="PT">PT (Point)</option>
-            <option value="S">S (Sommet)</option>
-            <option value="">Numéro seul</option>
-          </select>
         </div>
-      </div>
 
-      <!-- Exporter -->
-      <h4 data-i18n="h_export" style="margin-top:16px">Exporter</h4>
-      <div class="btnrow">
-        <button class="btn sm" data-exp="geojson">GeoJSON</button>
-        <button class="btn sm" data-exp="kml">KML</button>
-        <button class="btn sm" data-exp="csv">CSV</button>
-        <button class="btn sm" data-exp="gpx">GPX</button>
-        <button class="btn sm" data-exp="dxf">DXF Simple</button>
-        <button class="btn sm" id="btnDXFPlan" style="background:rgba(31,209,168,.12);border-color:var(--accent);color:var(--accent)">📐 DXF Plan Pro</button>
-        <button class="btn sm" data-exp="pdf">PDF</button>
+        <h4 data-i18n="h_export" style="margin-top:16px">Exporter</h4>
+        <div class="btnrow">
+          <button class="btn sm" data-exp="geojson">GeoJSON</button>
+          <button class="btn sm" data-exp="kml">KML</button>
+          <button class="btn sm" data-exp="csv">CSV</button>
+          <button class="btn sm" data-exp="gpx">GPX</button>
+          <button class="btn sm" data-exp="dxf">DXF Simple</button>
+          <button class="btn sm" id="btnDXFPlan" style="background:rgba(31,209,168,.12);border-color:var(--accent);color:var(--accent)">📐 DXF Plan Pro</button>
+          <button class="btn sm" data-exp="pdf">PDF</button>
+        </div>
+        <p class="note" data-i18n="export_note">L'export DXF/CSV utilise le système choisi dans l'onglet Coordonnées.</p>
       </div>
-      <p class="note" data-i18n="export_note">L'export DXF/CSV utilise le système de coordonnées choisi dans l'onglet Coordonnées.</p>
     </div>
 
-    <!-- ══════ ALTITUDES ══════ -->
+    <!-- ════ ELEV ════ -->
     <div class="pane" data-pane="elev">
-      <h4 data-i18n="h_elev">Altitudes / Topographie</h4>
-      <p class="note" data-i18n="elev_help">Sélectionnez un élément, choisissez le type d'analyse, puis calculez. Nécessite une connexion Internet.</p>
-      <label class="fld" data-i18n="elev_src">Source d'élévation</label>
-      <select id="elevSrc">
-        <option value="srtm30m">SRTM 30 m</option>
-        <option value="aster30m">ASTER 30 m</option>
-        <option value="mapzen">Mapzen (global)</option>
-      </select>
-      <label class="fld" data-i18n="elev_type">Type d'analyse</label>
-      <select id="elevType">
-        <option value="vertices"  data-i18n="et_vert">Altitude des sommets</option>
-        <option value="profile"   data-i18n="et_prof">Profil en long (ligne)</option>
-        <option value="grid"      data-i18n="et_grid">Grille déblai/remblai (polygone)</option>
-        <option value="contour"   data-i18n="et_contour">Courbes de niveau (polygone)</option>
-      </select>
-
-      <!-- Options avancées → section repliable -->
-      <div class="collapse-hdr" id="hdr-elevopt" style="margin-top:12px">
-        <h4 style="margin:0">⚙️ Options avancées</h4>
-        <span class="collapse-arr" id="arr-elevopt">▼</span>
+      <div class="panel-hdr">
+        <div class="panel-hdr-title">⛰️ <span data-i18n="t_elev">Altitudes / Topographie</span></div>
+        <div class="panel-close-btn" id="closePanel-elev">✕</div>
       </div>
-      <div class="collapse-body closed" id="body-elevopt" style="max-height:300px">
-        <div id="profOpt" style="display:none;margin-top:8px">
-          <label class="fld" data-i18n="n_points">Nombre de points</label>
-          <input type="number" id="nSamples" value="50" min="2" max="200">
-        </div>
-        <div id="gridOpt" style="display:none;margin-top:8px">
-          <label class="fld" data-i18n="grid_step">Pas de grille (m)</label>
-          <input type="number" id="gridStep" value="30" min="10" max="500">
-          <label class="fld" data-i18n="ref_lvl">Niveau de référence (m, vide = moyenne)</label>
-          <input type="number" id="refLvl" placeholder="auto">
-        </div>
-        <div id="contourOpt" style="display:none;margin-top:8px">
-          <label class="fld" data-i18n="c_step">Équidistance des courbes (m)</label>
-          <input type="number" id="contourStep" value="10" min="1" max="500">
-          <label class="fld" data-i18n="c_res">Résolution de la grille (m)</label>
-          <input type="number" id="contourRes" value="40" min="15" max="200">
-        </div>
-      </div>
+      <div style="padding:12px 14px 16px">
+        <p class="note" data-i18n="elev_help">Sélectionnez un élément, choisissez le type, puis calculez. Nécessite Internet.</p>
+        <label class="fld" data-i18n="elev_src">Source d'élévation</label>
+        <select id="elevSrc">
+          <option value="srtm30m">SRTM 30 m</option>
+          <option value="aster30m">ASTER 30 m</option>
+          <option value="mapzen">Mapzen (global)</option>
+        </select>
+        <label class="fld" data-i18n="elev_type">Type d'analyse</label>
+        <select id="elevType">
+          <option value="vertices"  data-i18n="et_vert">Altitude des sommets</option>
+          <option value="profile"   data-i18n="et_prof">Profil en long (ligne)</option>
+          <option value="grid"      data-i18n="et_grid">Grille déblai/remblai (polygone)</option>
+          <option value="contour"   data-i18n="et_contour">Courbes de niveau (polygone)</option>
+        </select>
 
-      <button class="btn accent" id="elevRun" style="margin-top:12px" data-i18n="elev_calc">Calculer les altitudes</button>
-      <div class="status" id="elevStatus"></div>
-      <div id="elevResult"></div>
-      <canvas id="elevChart" style="display:none;margin-top:10px;max-height:200px"></canvas>
-      <div class="btnrow two" id="elevExp" style="display:none">
-        <button class="btn sm" id="elevCsv">CSV</button>
-        <button class="btn sm" id="elevDxf">DXF 3D</button>
+        <!-- Options avancées — repliable -->
+        <div class="collapse-hdr" id="hdr-elevopt">
+          <h4 style="margin:0">⚙️ Options avancées</h4>
+          <span class="collapse-arr" id="arr-elevopt">▼</span>
+        </div>
+        <div class="collapse-body closed" id="body-elevopt" style="max-height:260px">
+          <div id="profOpt" style="display:none;margin-top:8px">
+            <label class="fld" data-i18n="n_points">Nombre de points</label>
+            <input type="number" id="nSamples" value="50" min="2" max="200">
+          </div>
+          <div id="gridOpt" style="display:none;margin-top:8px">
+            <label class="fld" data-i18n="grid_step">Pas de grille (m)</label>
+            <input type="number" id="gridStep" value="30" min="10" max="500">
+            <label class="fld" data-i18n="ref_lvl">Niveau de référence (m, vide = moyenne)</label>
+            <input type="number" id="refLvl" placeholder="auto">
+          </div>
+          <div id="contourOpt" style="display:none;margin-top:8px">
+            <label class="fld" data-i18n="c_step">Équidistance des courbes (m)</label>
+            <input type="number" id="contourStep" value="10" min="1" max="500">
+            <label class="fld" data-i18n="c_res">Résolution de la grille (m)</label>
+            <input type="number" id="contourRes" value="40" min="15" max="200">
+          </div>
+        </div>
+
+        <button class="btn accent" id="elevRun" style="margin-top:12px" data-i18n="elev_calc">Calculer les altitudes</button>
+        <div class="status" id="elevStatus"></div>
+        <div id="elevResult"></div>
+        <canvas id="elevChart" style="display:none;margin-top:10px;max-height:180px"></canvas>
+        <div class="btnrow two" id="elevExp" style="display:none">
+          <button class="btn sm" id="elevCsv">CSV</button>
+          <button class="btn sm" id="elevDxf">DXF 3D</button>
+        </div>
       </div>
     </div>
 
-    <!-- ══════ LISTE ══════ -->
+    <!-- ════ LIST ════ -->
     <div class="pane" data-pane="list">
-      <h4><span data-i18n="h_list">Éléments dessinés</span> (<span id="fcount">0</span>)</h4>
-      <div class="flist" id="flist"><div class="empty" data-i18n="no_feat">Aucun élément. Dessinez sur la carte.</div></div>
-      <div id="vertexWrap" style="display:none">
-        <h4><span data-i18n="h_vertices">Sommets</span> <span id="vCrs" style="color:var(--accent)"></span></h4>
-        <div id="vertexBox"></div>
-        <button class="btn sm" id="copyVerts" style="margin-top:8px" data-i18n="copy_coords">Copier les coordonnées</button>
+      <div class="panel-hdr">
+        <div class="panel-hdr-title">📋 <span data-i18n="h_list">Éléments dessinés</span> (<span id="fcount">0</span>)</div>
+        <div class="panel-close-btn" id="closePanel-list">✕</div>
+      </div>
+      <div style="padding:12px 14px 16px">
+        <div class="flist" id="flist">
+          <div class="empty" data-i18n="no_feat">Aucun élément. Dessinez sur la carte.</div>
+        </div>
+        <div id="vertexWrap" style="display:none">
+          <h4><span data-i18n="h_vertices">Sommets</span> <span id="vCrs" style="color:var(--accent)"></span></h4>
+          <div id="vertexBox"></div>
+          <button class="btn sm" id="copyVerts" style="margin-top:8px" data-i18n="copy_coords">Copier les coordonnées</button>
+        </div>
       </div>
     </div>
 
   </div><!-- /sheetbody -->
+
+  <!-- poignée (cachée par CSS mais gardée pour app.js) -->
+  <div class="grip" id="grip"><span></span></div>
+
 </div><!-- /sheet -->
 
 <!-- ══ Modal CRS ══ -->
-<div id="crsModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6)">
-  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:92%;max-width:440px;max-height:80vh;background:var(--surface);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;overflow:hidden">
+<div id="crsModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.65)">
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:92%;max-width:440px;max-height:80vh;background:var(--surface);
+    border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;overflow:hidden">
     <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
       <b style="flex:1" id="crsModalTitle">Système de coordonnées</b>
       <span id="crsClose" style="cursor:pointer;font-size:22px;color:var(--muted)">✕</span>
@@ -465,7 +668,15 @@ input[type=file]{display:none}
 <div class="toast" id="toast"></div>
 <div class="fatal" id="fatal"></div>
 
-<!-- ══ Scripts ══ -->
+<!-- GPS chip -->
+<div id="gpsChip" style="display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);
+  z-index:1500;background:rgba(17,24,39,.95);border:2px solid #1fd1a8;border-radius:20px;
+  padding:8px 16px;font:600 12px/1.5 ui-monospace,monospace;color:#1fd1a8;text-align:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none;min-width:200px"></div>
+
+<!-- ══════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════ -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js" crossorigin="anonymous"></script>
@@ -473,70 +684,96 @@ input[type=file]{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
 
-<!-- Auth + période d'essai (doit être avant app.js) -->
+<!-- Auth + période d'essai -->
 <script src="auth.js"></script>
-
 <!-- Application principale -->
 <script src="app.js"></script>
 
-<!-- GPS chip -->
-<div id="gpsChip" style="display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:1500;
-  background:rgba(17,24,39,.95);border:2px solid #1fd1a8;border-radius:20px;padding:8px 16px;
-  font:600 12px/1.5 ui-monospace,monospace;color:#1fd1a8;text-align:center;
-  box-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none;min-width:200px"></div>
-
-<!-- ══ Sections repliables — logique JS ══ -->
+<!-- ══════════════════════════════════════════════
+     SHIM de compatibilité + logique panneau
+══════════════════════════════════════════════ -->
 <script>
 (function(){
-  // Config des sections repliables
-  const sections = [
-    { hdr:'hdr-modify',   arr:'arr-modify',   body:'body-modify',   open:false },
-    { hdr:'hdr-planinfo', arr:'arr-planinfo',  body:'body-planinfo', open:false },
-    { hdr:'hdr-elevopt',  arr:'arr-elevopt',   body:'body-elevopt',  open:false },
-  ];
+  var sb = document.getElementById('sheetbody');
 
-  sections.forEach(function(s){
-    var hdr  = document.getElementById(s.hdr);
-    var arr  = document.getElementById(s.arr);
-    var body = document.getElementById(s.body);
-    if(!hdr || !arr || !body) return;
-
-    var isOpen = s.open;
-
-    function update(animate){
-      if(isOpen){
-        body.style.maxHeight = body.dataset.fullH || '400px';
-        body.style.opacity   = '1';
-        body.classList.remove('closed');
-        arr.classList.add('open');
-      } else {
-        // Enregistrer hauteur réelle avant fermeture
-        if(!body.dataset.fullH) body.dataset.fullH = body.scrollHeight + 'px';
-        body.style.maxHeight = '0';
-        body.style.opacity   = '0';
-        body.classList.add('closed');
-        arr.classList.remove('open');
-      }
+  /* ── Neutraliser les animations de app.js sur #sheet ── */
+  window.setSheet = function(){ /* no-op */ };
+  // Empêcher le drag-grip de réanimer la feuille
+  try {
+    var grip = document.getElementById('grip');
+    if(grip){
+      var g2 = grip.cloneNode(true);
+      grip.parentNode.replaceChild(g2, grip);
     }
+  } catch(e){}
 
-    update(false);
+  /* ── Gestion panneau ouvert/fermé ── */
+  function openPanel(paneName){
+    if(paneName === 'draw'){
+      sb.classList.remove('panel-open');
+    } else {
+      sb.classList.add('panel-open');
+    }
+  }
 
-    hdr.addEventListener('click', function(){
-      isOpen = !isOpen;
-      // Mesurer la hauteur avant d'ouvrir
-      if(isOpen){
-        body.classList.remove('closed');
-        body.style.maxHeight = 'none';
-        body.dataset.fullH = body.scrollHeight + 'px';
-        body.style.maxHeight = '0';
-        // Force reflow
-        body.offsetHeight;
+  /* Observer les changements de classe sur les panes (app.js switch) */
+  var mo = new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      var el = m.target;
+      if(el.classList && el.classList.contains('pane') && el.classList.contains('on')){
+        openPanel(el.dataset.pane || 'draw');
       }
-      update(true);
+    });
+  });
+  if(sb) mo.observe(sb, { subtree:true, attributes:true, attributeFilter:['class'] });
+
+  /* ── Boutons fermer panneau ── */
+  function goToDraw(){
+    // Simuler clic sur l'onglet draw pour que app.js sync
+    var drawTab = document.querySelector('.tab[data-pane="draw"]');
+    if(drawTab) drawTab.click();
+    sb.classList.remove('panel-open');
+  }
+
+  ['coords','convert','io','elev','list'].forEach(function(p){
+    var btn = document.getElementById('closePanel-'+p);
+    if(btn) btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      goToDraw();
     });
   });
 
-  // Ouvrir les options avancées quand l'analyse change
+  /* ── Sections repliables ── */
+  [
+    { hdr:'hdr-planinfo', arr:'arr-planinfo', body:'body-planinfo' },
+    { hdr:'hdr-elevopt',  arr:'arr-elevopt',  body:'body-elevopt'  },
+  ].forEach(function(s){
+    var hdr  = document.getElementById(s.hdr);
+    var arr  = document.getElementById(s.arr);
+    var body = document.getElementById(s.body);
+    if(!hdr || !body) return;
+    var open = false;
+    hdr.addEventListener('click', function(){
+      open = !open;
+      if(open){
+        body.classList.remove('closed');
+        body.style.maxHeight = 'none';
+        var h = body.scrollHeight;
+        body.style.maxHeight = '0';
+        body.offsetHeight;
+        body.style.maxHeight = h+'px';
+        body.style.opacity   = '1';
+        if(arr) arr.classList.add('open');
+      } else {
+        body.style.maxHeight = '0';
+        body.style.opacity   = '0';
+        body.classList.add('closed');
+        if(arr) arr.classList.remove('open');
+      }
+    });
+  });
+
+  /* Ouvrir options avancées auto quand type change */
   var elevType = document.getElementById('elevType');
   if(elevType){
     elevType.addEventListener('change', function(){
@@ -545,13 +782,25 @@ input[type=file]{display:none}
       if(body && body.classList.contains('closed') && this.value !== 'vertices'){
         body.classList.remove('closed');
         body.style.maxHeight = 'none';
-        body.dataset.fullH   = body.scrollHeight + 'px';
-        body.style.maxHeight = body.dataset.fullH;
+        body.style.maxHeight = body.scrollHeight+'px';
         body.style.opacity   = '1';
         if(arr) arr.classList.add('open');
       }
     });
   }
+
+  /* ── Leaflet zoom controls au dessus de la barre ── */
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      var lc = document.querySelector('.leaflet-bottom.leaflet-right');
+      if(lc) lc.style.bottom = 'calc(var(--bar-h) + 6px)';
+      var lbc = document.querySelector('.leaflet-bottom.leaflet-left');
+      if(lbc) lbc.style.bottom = 'calc(var(--bar-h) + 6px)';
+      // Corriger taille map
+      if(window.map) window.map.invalidateSize();
+    }, 400);
+  });
+
 })();
 </script>
 
