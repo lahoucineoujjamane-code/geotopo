@@ -1,0 +1,81 @@
+name: Build APK - Topo Tools
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ── Setup ──────────────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ── Decode Keystore ────────────────────────────────────
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > signing.keystore
+
+      # ── Install Bubblewrap ─────────────────────────────────
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli@latest
+
+      # ── Accept Android SDK licenses ───────────────────────
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      # ── Build APK + AAB ───────────────────────────────────
+      - name: Build with Bubblewrap
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          bubblewrap build \
+            --skipPwaValidation \
+            --manifest twa-manifest.json \
+            --signingKeyPath ./signing.keystore \
+            --signingKeyAlias "$KEY_ALIAS" \
+            --signingKeyPassword "$KEY_PASSWORD" \
+            --signingStorePassword "$KEYSTORE_PASSWORD"
+
+      # ── Upload APK ────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: topo-tools-apk
+          path: |
+            app-release-signed.apk
+            app-release.aab
+          retention-days: 30
+
+      # ── Create GitHub Release ─────────────────────────────
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "Topo Tools v1.0.${{ github.run_number }}"
+          files: |
+            app-release-signed.apk
+            app-release.aab
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
