@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.soussdigipro.topotools",
+    "sha256_cert_fingerprints": ["EF:A0:20:9F:D0:30:15:83:DA:2A:A2:BD:A3:EA:7C:62:09:48:97:22:D9:BE:7F:6A:0C:BF:70:FA:07:3B:49:43"]
+  }
+}]
