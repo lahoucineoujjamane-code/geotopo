@@ -1,0 +1,41 @@
+{
+  "packageId": "com.soussdigipro.topotools",
+  "host": "lahoucineoujjamane-code.github.io",
+  "name": "Topo Tools",
+  "launcherName": "Topo Tools",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#0b1120",
+  "navigationColor": "#080e1a",
+  "navigationColorDark": "#080e1a",
+  "navigationDividerColor": "#080e1a",
+  "backgroundColor": "#080e1a",
+  "enableNotifications": false,
+  "startUrl": "/geotopo/",
+  "iconUrl": "https://lahoucineoujjamane-code.github.io/geotopo/icon-512.png",
+  "maskableIconUrl": "https://lahoucineoujjamane-code.github.io/geotopo/icon-512.png",
+  "monochromeIconUrl": "https://lahoucineoujjamane-code.github.io/geotopo/icon-192.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./signing.keystore",
+    "alias": "topotools"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://lahoucineoujjamane-code.github.io/geotopo/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fingerprints": []
+}
